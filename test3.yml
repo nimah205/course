@@ -1,0 +1,65 @@
+---
+- name: WebServers to deploy to
+  hosts: all
+  remote_user: ec2-user
+  become: yes
+  vars:
+    - server_hostname: "put IP addres"
+    - key_size: 4096
+    - key_type: RSA
+#     webservers:
+#   children:
+#     webservers:
+#       hosts:
+  tasks:
+
+  - name: Run a command as the root user/install https
+    command: yum install -y httpd
+    become: yes
+    become_user: root
+
+#  - name: Allow http/https
+#    command: firewall-cmd --zone=dmz --permanent --add-service=http --add-service=http  
+
+#  - name: Restart Firewall
+#    command: systemctl restart firewalld 
+
+  - name: Creates directory
+    file:
+      path: ./certificates
+      state: directory
+
+  - name: Generate an OpenSSL private key
+    openssl_privatekey:
+      path: "./certificates/{{ server_hostname }}_privkey.pem"
+      size: "{{ key_size }}"
+      type: "{{ key_type }}"
+      backup: yes
+
+  - name: Generate an OpenSSL Certificate Signing Request with Subject information
+    openssl_csr:
+      path: "./certificates/{{ server_hostname }}.csr"
+      privatekey_path: "./certificates/{{ server_hostname }}_privkey.pem"
+      country_name: NY
+      organization_name: anything
+      email_address: anything
+      common_name: "{{ server_hostname }}"
+
+  - name: Create Document Root
+    file: path=/var/www/html state=directory
+  
+  - name: Copying document root
+    copy:
+      src: /tmp/index.html
+      dest: /var/www/html
+      
+  - name: Run config test on ssl cert
+    command: apachectl configtest
+    become: yes
+    become_user: root   
+
+  - name: starting httpd
+    service:
+       name: httpd
+       state: restarted
+       enabled: yes
