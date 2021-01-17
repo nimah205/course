@@ -62,7 +62,7 @@
          assign_public_ip: yes
       register: ec2
   vars:
-    UNIQUE_BUCKET_NAME: ansible-bucket-456
+    UNIQUE_BUCKET_NAME: #put unique bucket name here
   tasks:
     - name: Create new S3 bucket
       aws_s3:
